@@ -3,15 +3,20 @@ import numpy as np
 
 class ice_cube_data:
     # everything for one batch only now
-    def __init__(self,fbatch,width={'x':20,'y':20,'z':40}):
+    def __init__(self,
+                 fbatch,
+                 fsensor="/scratch/ICE-CUBE/sensor_geometry.csv",
+                 fmetaf="/scratch/ICE-CUBE/train_meta.parquet",
+                 every_nth_event=100,
+                 width={'x':20,'y':20,'z':40}):
         import pandas as pd
         from pyarrow.parquet import ParquetFile
         import pyarrow as pa
         import numpy as np
         
         # Files for creating the data
-        self.fsensor="/scratch/ICE-CUBE/sensor_geometry.csv" # default geometry
-        self.fmeta=ParquetFile("/scratch/ICE-CUBE/train_meta.parquet") # meta data
+        self.fsensor=fsensor # default geometry
+        self.fmeta=ParquetFile(fmetaf) # meta data
         self.fbatch=fbatch # dictionary with all the batches
         
         self.sensorgeom_df_orig = pd.read_csv(self.fsensor).set_index("sensor_id")# dataframe with sensor geometry
@@ -32,12 +37,13 @@ class ice_cube_data:
         self.sensorgeomorig=self.sensorgeom_df_orig.to_dict()
         
         #charge depost and temporal data and meta data for only 1st batch (for now)
-        self.batch= pd.read_parquet(self.fbatch['1']).query("(event_id%100==0) & (auxiliary==False)").drop(["auxiliary"],axis=1)
+        self.batch= pd.read_parquet(self.fbatch['1']).query(f"(event_id%{every_nth_event}==0) & (auxiliary==False)").drop(["auxiliary"],axis=1)
+        
         #print(self.batch.loc[2800])
         #Just make a charge data, by summing charge deposits on the same sensor for each event, and create sensor_id again as column
         self.realevents=self.batch.drop(["time"],axis=1).groupby(["event_id","sensor_id"]).sum("charge").reset_index(level=[1])
         
-        first_n_rows = next(self.fmeta.iter_batches(batch_size = 185806*100))#
+        first_n_rows = next(self.fmeta.iter_batches(batch_size = len(self.batch)*every_nth_event))#
         
         # Create meta data frame
         self.meta=pa.Table.from_batches([first_n_rows]).to_pandas()
