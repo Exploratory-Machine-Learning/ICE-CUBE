@@ -73,8 +73,8 @@ class ice_cube_data:
         
         def fill_image_data(row):
                 self.img_data[self.eventdict[int(row.event_id)], int(row.x), int(row.y), int(row.z)] = row.charge
-                self.labels[self.eventdict[row.event_id], 0] = self.meta.loc[ievent, "azimuth"]
-                self.labels[self.eventdict[row.event_id], 1] = self.meta.loc[ievent, "zenith"]
+                self.labels[self.eventdict[row.event_id], 0] = self.meta.loc[int(row.event_id), "azimuth"]
+                self.labels[self.eventdict[row.event_id], 1] = self.meta.loc[int(row.event_id), "zenith"]
                 
         myevents.apply(fill_image_data, axis=1)
         
